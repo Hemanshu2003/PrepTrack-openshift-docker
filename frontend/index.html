@@ -1,77 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PrepTrack Dashboard</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            text-align: center;
-            color: #0056b3;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
-
-        .task-card {
-            background: #fafafa;
-            border-left: 5px solid #0056b3;
-            margin: 15px 0;
-            padding: 15px;
-            border-radius: 4px;
-        }
-
-        .task-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .status {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: bold;
-            color: white;
-        }
-
-        .status-Pending {
-            background-color: #dc3545;
-        }
-
-        .status-In-Progress {
-            background-color: #ffc107;
-            color: #333;
-        }
-
-        .status-Completed {
-            background-color: #28a745;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #0056b3; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; border: none; background: #0056b3; color: white; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #004494; }
+        .delete-btn { background: #dc3545; padding: 5px 10px; font-size: 0.9em; float: right; }
+        .delete-btn:hover { background: #c82333; }
+        .task-card { background: #fafafa; border-left: 5px solid #0056b3; margin: 15px 0; padding: 15px; border-radius: 4px; overflow: hidden; }
+        .task-title { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
-
 <body>
     <div class="container">
         <h1>📚 PrepTrack Study Portal</h1>
-        <p style="text-align: center;">Your centralized dashboard for exam and interview preparation.</p>
+        
+        <div class="form-group">
+            <input type="text" id="new-topic" placeholder="Exam Topic (e.g., Computer Networks)">
+            <input type="text" id="new-desc" placeholder="Details (e.g., Subnetting practice)">
+            <button onclick="createTask()">Add Task</button>
+        </div>
+
         <div id="tasks-container">Loading tasks...</div>
     </div>
 
@@ -79,39 +35,52 @@
         // NOTE: Before deploying the frontend, replace "BACKEND_OPENSHIFT_ROUTE_URL" 
         // with the actual Route URL OpenShift generates for your backend API.
         // For local Docker testing, use "http://localhost:5000/api/tasks"
-        const apiUrl = 'http://api-backend-hemanshu03-dev.apps.rm1.0a51.p1.openshiftapps.com/api/tasks';
+        // PASTE YOUR OPENSHIFT BACKEND ROUTE URL HERE
+        const apiUrl = 'http://api-backend-hemanshu03-dev.apps.rm1.0a51.p1.openshiftapps.com/api/tasks/api/tasks';
 
         async function fetchTasks() {
-            try {
-                const response = await fetch(apiUrl);
-                const tasks = await response.json();
-                const container = document.getElementById('tasks-container');
-                container.innerHTML = '';
+            const response = await fetch(apiUrl);
+            const tasks = await response.json();
+            const container = document.getElementById('tasks-container');
+            container.innerHTML = ''; 
 
-                if (tasks.error) {
-                    container.innerHTML = `<p style="color:red;">Error connecting to database: ${tasks.error}</p>`;
-                    return;
-                }
+            if (tasks.error) return container.innerHTML = `<p style="color:red;">Error: ${tasks.error}</p>`;
 
-                tasks.forEach(task => {
-                    const statusClass = `status-${task.status.replace(' ', '-')}`;
-                    const card = `
-                        <div class="task-card">
-                            <div class="task-title">${task.topic} <span class="status ${statusClass}">${task.status}</span></div>
-                            <div>${task.description}</div>
-                        </div>
-                    `;
-                    container.innerHTML += card;
-                });
-            } catch (error) {
-                document.getElementById('tasks-container').innerHTML = `<p style="color:red;">Failed to load API. Ensure the backend is running and the OpenShift Route is correct.</p>`;
+            tasks.forEach(task => {
+                container.innerHTML += `
+                    <div class="task-card">
+                        <button class="delete-btn" onclick="deleteTask(${task.id})">Delete</button>
+                        <div class="task-title">${task.topic}</div>
+                        <div>${task.description}</div>
+                    </div>
+                `;
+            });
+        }
+
+        async function createTask() {
+            const topic = document.getElementById('new-topic').value;
+            const desc = document.getElementById('new-desc').value;
+            if (!topic) return alert("Topic is required!");
+
+            await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: topic, description: desc, status: 'Pending' })
+            });
+            
+            document.getElementById('new-topic').value = '';
+            document.getElementById('new-desc').value = '';
+            fetchTasks();
+        }
+
+        async function deleteTask(id) {
+            if (confirm("Are you sure you want to delete this task?")) {
+                await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+                fetchTasks();
             }
         }
 
         fetchTasks();
     </script>
 </body>
-
-
 </html>
-
