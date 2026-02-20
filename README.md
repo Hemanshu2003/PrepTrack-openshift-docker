@@ -37,17 +37,10 @@ The application is broken down into three decoupled tiers:
 1. **Frontend (Tier 1):** A lightweight HTML/JS web interface served by an Nginx container. It makes asynchronous REST calls to the backend.
 2. **Backend API (Tier 2):** A Python (Flask) REST API that handles business logic and database connections.
 3. **Database (Tier 3):** A PostgreSQL database utilizing a Persistent Volume Claim (PVC) to ensure study data survives pod restarts.
+
  
-```text
-[ Web Browser ]  ---> (OpenShift Route) ---> [ Nginx Frontend Pod(s) ]
-                                                    |
-                                                    v
-[ Python Flask API Pod(s) ] <--- (Internal Service) +
-            |
-            v
-[ PostgreSQL Pod ] ---> (Persistent Volume Claim)
- 
-```
+![SS-Architecture-Daigram](https://github.com/Hemanshu2003/PrepTrack-openshift-docker/blob/main/arch.png)
+
  
 ## ⚙️ Prerequisites
  
