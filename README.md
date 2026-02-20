@@ -3,9 +3,6 @@ PrepTrack is a cloud-native, multi-tier web application designed to track study 
 
 ---
  
-```markdown
-# 📚 PrepTrack: 3-Tier Microservices Study Portal
- 
 ![OpenShift](https://img.shields.io/badge/OpenShift-EE0000?style=for-the-badge&logo=redhat&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
