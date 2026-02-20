@@ -9,7 +9,7 @@ PrepTrack is a cloud-native, multi-tier web application designed to track study 
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
  
 ## 🎯 Project Overview
-PrepTrack is a cloud-native, 3-tier web application built to manage intensive study schedules and track preparation progress for competitive technical exams, such as GATE and BARC CS.
+PrepTrack is a cloud-native, 3-tier web application built to manage intensive study schedules and track preparation progress for competitive technical exams.
  
 This project serves as a practical demonstration of containerization, microservices architecture, and Kubernetes/OpenShift fundamentals. It showcases the deployment of a frontend UI, a stateless REST API, and a stateful database, all communicating securely within an OpenShift cluster.
  
@@ -35,7 +35,8 @@ The application is broken down into three decoupled tiers:
 ## ⚙️ Prerequisites
  
 To deploy this project, you will need:
- 
+
+* Fork/Clone this *repo* to your repository _(IMP)_.
 * Access to an OpenShift Cluster (e.g., Red Hat Developer Sandbox).
 * The OpenShift CLI (`oc`) installed and logged in.
 * Docker installed locally (if building images from scratch).
@@ -44,94 +45,201 @@ To deploy this project, you will need:
  
 ## 🚀 Deployment Guide
  
-Follow these steps to deploy the complete architecture to your OpenShift environment.
+Since our code is on GitHub, we will use OpenShift's **"Source-to-Image" (S2I) / Build** capabilities. This means OpenShift will pull your code, read your Dockerfiles, build the images inside the cluster, and deploy them.
  
-### Step 1: Clone the Repository
+Here is your exact, step-by-step execution guide. Open your terminal, log in to your OpenShift Sandbox, and follow these commands one by one. 
+`USING SANDBOX CLI` for Deployment. (You can also use `CMD` make sure to install `oc.exe` from RedHat Offical -- then using `oc login --token=sha256~k4O5Wu45OyAX2xxxxx`).
+ 
+### 📋 Phase 1: Foundation (Project & Database)
+
+**Step 1: Create the Project (Namespace) (SKIP if you are using _Red Hat Developer Sandbox_)**
+*Note: Projects isolate your application resources.*
  
 ```bash
-git clone [https://github.com/YOUR_USERNAME/preptrack-repo.git](https://github.com/YOUR_USERNAME/preptrack-repo.git)
-cd preptrack-repo
- 
+oc new-project preptrack-live
+
 ```
  
-### Step 2: Create a Dedicated OpenShift Project
- 
-We isolate our application resources in a dedicated namespace.
+**Step 2: Create a Secret for Database Security**
+*Note: Secrets store sensitive data (passwords) securely, separate from code.*
  
 ```bash
-oc new-project preptrack-env --display-name="PrepTrack Study Portal"
- 
+oc create secret generic db-secret --from-literal=DB_PASSWORD=SuperSecret123
+
 ```
  
-### Step 3: Deploy the Database Tier (Stateful)
- 
-Security and storage are paramount for the database. We first create a Secret to keep our password out of the deployment configurations, then deploy PostgreSQL with persistent storage.
+**Step 3: Deploy the Database (Storage)**
+*We are using a persistent database so data survives restart. This uses a standard PostgreSQL image.*
  
 ```bash
-# 1. Create a Secret for the DB password
-oc create secret generic db-credentials --from-literal=db-password=SuperSecret123
- 
-# 2. Deploy PostgreSQL using the OpenShift catalog
 oc new-app postgresql-persistent \
-  -p POSTGRESQL_USER=prepuser \
-  -p POSTGRESQL_PASSWORD=SuperSecret123 \
-  -p POSTGRESQL_DATABASE=preptrackdb \
-  -p VOLUME_CAPACITY=1Gi \
-  --name=postgres-db
+    -p POSTGRESQL_USER=prepuser \
+    -p POSTGRESQL_PASSWORD=SuperSecret123 \
+    -p POSTGRESQL_DATABASE=preptrackdb \
+    -p VOLUME_CAPACITY=1Gi \
+    --name=postgres-db
  
 ```
  
-*(Note: Once the database pod is running, use `oc rsh <postgres-pod-name>` to log in and execute the `database/init.sql` script to seed the initial study tasks).*
+*(Wait a moment for the database pod to start. You can check status with `oc get pods`)*
  
-### Step 4: Deploy the Backend API Tier (Stateless)
+---
  
-The backend needs to know how to find the database. We use a ConfigMap to pass non-sensitive environment variables (like the DB host) to the pod.
+### 🐍 Phase 2: The Backend (Builds & Configuration)
+ 
+**Step 4: Deploy Backend from GitHub**
+*"Docker Build Strategy". OpenShift pulls your repo, goes into the `backend` folder, and builds the Dockerfile found there.*
+ 
+* **Replace** `YOUR_GITHUB_USER` with your actual username. In my case i am using my repo.
  
 ```bash
-# 1. Create a ConfigMap for DB connection routing
+oc new-app https://github.com/Hemanshu2003/PrepTrack-openshift-docker \
+    --context-dir=backend \
+    --name=api-backend \
+    --strategy=docker
+
+```
+ 
+**Step 5: Inject Configuration (ConfigMaps)**
+*ConfigMaps allow us to inject environment variables (like DB host) into the container without changing the code.*
+ 
+```bash
+# 1. Create the ConfigMap linking to our database service name 'postgres-db'
 oc create configmap backend-config \
-  --from-literal=DB_HOST=postgres-db \
-  --from-literal=DB_PORT=5432 \
-  --from-literal=DB_NAME=preptrackdb \
-  --from-literal=DB_USER=prepuser
+    --from-literal=DB_HOST=postgresql \
+    --from-literal=DB_NAME=preptrackdb \
+    --from-literal=DB_USER=prepuser
  
-# 2. Deploy the Python Backend (Assuming the image is pushed to a public registry like Docker Hub)
-# Replace 'YOUR_DOCKERHUB_USERNAME' with your actual username where you pushed the image
-oc new-app YOUR_DOCKERHUB_USERNAME/preptrack-backend:v1 --name=api-backend
- 
-# 3. Inject the ConfigMap and Secret into the Backend Deployment
+# 2. Add the ConfigMap to the deployment
 oc set env deployment/api-backend --from=configmap/backend-config
-oc set env deployment/api-backend DB_PASS=SuperSecret123
+ 
+# 3. Add the Secret (Password) to the deployment
+oc set env deployment/api-backend --from=secret/db-secret
  
 ```
  
-### Step 5: Expose the Backend API
- 
-The frontend needs a URL to communicate with the backend. We expose the backend service to create a public Route.
+**Step 6: Expose the Backend (Routes)**
+*Routes to create a public URL so the outside world (and your frontend) can reach the API.*
  
 ```bash
 oc expose svc/api-backend
+ 
+```
+ 
+---
+ 
+### 🔄 Phase 3: The Critical Connection (Development Lifecycle)
+ 
+**Step 7: Get your Backend URL**
+Run this command and **copy the URL** under the `HOST/PORT` column:
+ 
+```bash
 oc get route api-backend
  
 ```
  
-**Crucial Configuration:** Copy the URL output from the `oc get route` command. Open `frontend/index.html` and replace `BACKEND_OPENSHIFT_ROUTE_URL` with this actual URL before building your frontend image.
+*(It will look like: `api-backend-your-sandbox-name-live.apps.sandbox...`)*
  
-### Step 6: Deploy the Frontend UI Tier
+**Step 8: Update your Frontend Code**
  
-With the API route configured in our HTML, we can deploy the Nginx frontend.
+1. Go to your repo `PrepTrack-openshift-docker` folder.
+2. Open `frontend/index.html`.
+3. Find the line `const apiUrl = ...`.
+4. **Replace** the placeholder with the URL you just copied. Ensure you keep the `/api/tasks` at the end.
+* *Example:* `const apiUrl = 'http://api-backend-preptrack-live.apps.sandbox.../api/tasks';` -- make sure to add `http://`.  
+ 
+ 
+5. **Save, Commit, and Push** this change to GitHub:
+```bash
+git add .
+git commit -m "Update API URL"
+git push origin main
+ 
+```
+ 
+---
+ 
+### 🌐 Phase 4: The Frontend (Scaling & Services)
+ 
+**Step 9: Deploy Frontend from GitHub**
+Now that the code on GitHub has the correct API URL, we deploy the frontend.
  
 ```bash
-# 1. Deploy the Nginx Frontend
-oc new-app YOUR_DOCKERHUB_USERNAME/preptrack-frontend:v1 --name=web-frontend
+oc new-app https://github.com/Hemanshu2003/PrepTrack-openshift-docker \
+    --context-dir=frontend \
+    --name=web-frontend \
+    --strategy=docker
  
-# 2. Scale the frontend to ensure high availability
+```
+ 
+**Step 10: Scale the Frontend (Optional)**
+*Scaling creates multiple copies (replicas) of your application to handle more traffic.*
+ 
+```bash
 oc scale deployment/web-frontend --replicas=2
  
-# 3. Expose the frontend to the public internet
+```
+ 
+**Step 11: Expose the Frontend**
+This creates the final URL for you to view your app.
+ 
+```bash
 oc expose svc/web-frontend
  
 ```
+ 
+---
+ 
+### 🏗️ Phase 5: Advanced OpenShift (Templates, Users, Database Init)
+ 
+**Step 12: Initialize the Database Tables**
+*Remote Shelling (`rsh`). We need to run the SQL commands inside the running database pod.*
+ 
+1. Find your database pod name:
+```bash
+oc get pods
+ 
+```
+ 
+ 
+*(Look for something like `postgres-db-1-xxxxx`)*
+2. Remote into the pod (replace the pod name below):
+```bash
+oc rsh postgres-db-1-xxxxx
+ 
+```
+ 
+ 
+3. Once inside the prompt (`sh-4.2$`), log into Postgres and run your SQL:
+```bash
+psql -U prepuser -d preptrackdb
+ 
+```
+ 
+ 
+4. Paste the contents of your `database/init.sql` file here (CREATE TABLE, INSERT...).
+5. Type `\q` to exit Postgres, and `exit` to leave the pod.
+ 
+**Step 13: Export as a Template (Optional)**
+*Templates allow you to "save" this entire complex setup as a reusable blueprint.*
+ 
+```bash
+oc get deployment,svc,route -l app=web-frontend -o yaml > my-frontend-template.yaml
+ 
+```
+ 
+**Step 14: Simulate User Management (Optional)**
+*Concept: RBAC (Role Based Access Control). Simulating adding a teammate.*
+ 
+```bash
+# Give a fake user 'view' access to your project
+oc adm policy add-role-to-user view fake-developer -n preptrack-live
+ 
+```
+ 
+### ✅ Final Step
+ 
+Run `oc get route web-frontend`, click the link, and you should see your **PrepTrack** app live, connecting to the database, and displaying your study tasks!
  
 ## ✅ Verification
  
@@ -142,8 +250,8 @@ oc get route web-frontend
  
 ```
  
-Click the generated link. You should see the PrepTrack dashboard successfully fetching your study tasks from the PostgreSQL database via the Python API!
- 
+Copy the generated link add `http://<copied-link>` in browser. You should see the PrepTrack dashboard successfully fetching your study tasks from the PostgreSQL database via the Python API!
+
 ## 🧹 Cleanup
  
 To tear down the entire project and free up cluster resources:
