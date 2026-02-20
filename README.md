@@ -271,10 +271,20 @@ Copy the generated link add `http://<copied-link>` in browser. You should see th
 
 ## 🧹 Cleanup
  
-To tear down the entire project and free up cluster resources:
+To tear down the entire project and free up cluster resources (Note: This will delete everything):
  
 ```bash
-oc delete project preptrack-env
+oc delete all,secret,configmap,pvc,deployment --all
  
 ```
- 
+
+Thank You.
+
+***
+
+## ✨ Author
+
+**Hemanshu Anil Waghmare (CG)**  
+Feel free to reach out on **[LinkedIn](http://www.linkedin.com/in/hemanshu-anil-waghmare-50a7a3291)**!
+
+***
