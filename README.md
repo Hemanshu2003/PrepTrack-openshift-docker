@@ -12,6 +12,23 @@ PrepTrack is a cloud-native, multi-tier web application designed to track study 
 PrepTrack is a cloud-native, 3-tier web application built to manage intensive study schedules and track preparation progress for competitive technical exams.
  
 This project serves as a practical demonstration of containerization, microservices architecture, and Kubernetes/OpenShift fundamentals. It showcases the deployment of a frontend UI, a stateless REST API, and a stateful database, all communicating securely within an OpenShift cluster.
+
+### 📖 Core Concepts & Definitions
+This project implements the following OpenShift/Kubernetes fundamentals:
+
+1. *Project (Namespace):* A virtual cluster inside OpenShift that isolates our application environments (e.g., preptrack-dev).
+
+2. *Pod:* The smallest deployable computing unit in Kubernetes. It encapsulates one or more Docker containers (e.g., our Python API runs inside a Pod).
+
+3. *Deployment:* An object that manages the creation, scaling, and self-healing of Pods. If a backend Pod crashes, the Deployment spins up a new one.
+
+4. *Service (Networking):* An internal load balancer that gives a stable internal IP address to a set of Pods. It allows the Frontend to always find the Backend, even if the Backend Pods are destroyed and recreated.
+
+5. *Route:* An OpenShift-specific object (similar to a Kubernetes Ingress) that exposes a Service to the outside world with a public URL.
+
+6. *Persistent Volume Claim (PVC):* A request for storage. Containers are ephemeral (data dies when the container dies). A PVC ensures our PostgreSQL database data survives Pod restarts.
+
+7. *ConfigMap & Secret:* Objects used to inject configuration data (like database URLs) and sensitive data (like database passwords) into Pods without hardcoding them in the Docker image.
  
 ## 🏗️ Architecture
  
