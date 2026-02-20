@@ -269,6 +269,47 @@ oc get route web-frontend
  
 Copy the generated link add `http://<copied-link>` in browser. You should see the PrepTrack dashboard successfully fetching your study tasks from the PostgreSQL database via the Python API!
 
+## Optional - **Health Probes in OpenShift (Liveness & Readiness)**
+
+OpenShift uses health probes—just like Kubernetes—to monitor container health and control traffic flow to pods.
+
+***
+
+### **1. Liveness Probe**
+
+*   Checks if the application **is still running properly**.
+*   If the liveness probe fails, OpenShift will **restart the container**.
+*   Helps recover from deadlocks, crashes, or hung processes.
+
+**Meaning:** *“Is the app alive, or should I restart it?”*
+
+```bash
+oc set probe deployment/api-backend --liveness --get-url=http://:5000/health --initial-delay-seconds=15
+```
+
+***
+
+### **2. Readiness Probe**
+
+*   Checks if the application **is ready to accept traffic**.
+*   If it fails, OpenShift **stops sending requests** to that pod until it becomes ready again.
+*   Ensures only healthy pods serve users.
+*   
+```bash
+oc set probe deployment/api-backend --readiness --get-url=http://:5000/health --initial-delay-seconds=5
+```
+
+**Meaning:** *“Can this pod handle requests right now?”*
+
+***
+
+### **In short (OpenShift):**
+
+*   **Liveness Probe → Ensures the app stays alive (restart if needed).**
+*   **Readiness Probe → Ensures traffic goes only to ready pods.**
+
+***
+
 ## 🧹 Cleanup
  
 To tear down the entire project and free up cluster resources (Note: This will delete everything):
