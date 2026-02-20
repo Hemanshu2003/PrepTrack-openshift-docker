@@ -36,7 +36,7 @@
         // with the actual Route URL OpenShift generates for your backend API.
         // For local Docker testing, use "http://localhost:5000/api/tasks"
         // PASTE YOUR OPENSHIFT BACKEND ROUTE URL HERE
-        const apiUrl = 'http://api-backend-hemanshu03-dev.apps.rm1.0a51.p1.openshiftapps.com/api/tasks/api/tasks';
+        const apiUrl = 'http://api-backend-hemanshu03-dev.apps.rm1.0a51.p1.openshiftapps.com/api/tasks';
 
         async function fetchTasks() {
             const response = await fetch(apiUrl);
@@ -84,3 +84,4 @@
     </script>
 </body>
 </html>
+
